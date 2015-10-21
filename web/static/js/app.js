@@ -24,7 +24,7 @@ class BootState {
 		game.load.image('progressBar', 'images/progressBar.png')
 	}
 	create() {
-		game.stage.backgroundColor = '#3498db'
+		game.stage.backgroundColor = '#304040'
 		game.physics.startSystem(Phaser.Physics.ARCADE)
 
 		game.state.start('load')
@@ -53,13 +53,40 @@ class LoadState {
 }
 
 class PlayState {
-	create() {
+	preload() {
+		game.load.image('bat', 'images/bat.svg')
+		game.load.image('ghost', 'images/ghost.svg')
+		game.load.image('pumpkin', 'images/pumpkin.svg')
+	}
 
+	onDown(sprite, pointer) {
+	 // do something wonderful here
+	 alert('got here')
+	}
+
+	create() {
+		let bat = game.add.sprite(game.world.centerX, game.world.centerY, 'bat')
+		bat.anchor.setTo(0.5, 0.5)
+		bat.scale.set(0.2)
+    bat.smoothed = false
+		bat.inputEnabled = true
+		bat.input.pixelPerfectOver = true
+    bat.input.useHandCursor = true
+		bat.events.onInputDown.add(this.onDown,this)
+		this.bat = bat
 	}
 
 	update() {
-
+//		this.bat.angle += 5
+		// this.bat.scale += 1
 	}
+
+	// render() {
+	// 	game.debug.spriteInputInfo(this.bat, 32, 32)
+  //   game.debug.geom(this.bat.input._tempPoint);
+	// }
+
+
 }
 
 class MenuState {
