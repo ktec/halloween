@@ -19,66 +19,101 @@ import "deps/phoenix_html/web/static/js/phoenix_html"
 // paths "./socket" or full ones "web/static/js/socket".
 
 // import socket from "./socket"
-class BootState {
+class BootState extends Phaser.State {
 	preload() {
-		game.load.image('progressBar', 'images/progressBar.png')
+		this.game.load.image('progressBar', 'images/progressBar.png')
 	}
 	create() {
-		game.stage.backgroundColor = '#304040'
-		game.physics.startSystem(Phaser.Physics.ARCADE)
+		this.game.stage.backgroundColor = '#304040'
+		this.game.physics.startSystem(Phaser.Physics.ARCADE)
 
-		game.state.start('load')
+		this.game.state.start('load')
 	}
 }
 
-class LoadState {
+class LoadState extends Phaser.State {
 	preload() {
 		// Add a loading label
-		var loadingLabel = game.add.text(game.world.centerX, 150, 'loading...', { font: '30px Arial', fill: '#ffffff' })
+		var loadingLabel = this.game.add.text(this.game.world.centerX, 150, 'loading...', { font: '30px Arial', fill: '#ffffff' })
 		loadingLabel.anchor.setTo(0.5, 0.5)
 
 		// Add a progress bar
-		var progressBar = game.add.sprite(game.world.centerX, 200, 'progressBar')
+		var progressBar = this.game.add.sprite(this.game.world.centerX, 200, 'progressBar')
 		progressBar.anchor.setTo(0.5, 0.5)
-		game.load.setPreloadSprite(progressBar)
+		this.game.load.setPreloadSprite(progressBar)
 
 		// Load all assets
-		game.load.spritesheet('mute', 'images/muteButton.png', 28, 22)
+		this.game.load.spritesheet('mute', 'images/muteButton.png', 28, 22)
 		// ...
 	}
 
 	create() {
-		game.state.start('menu')
+		this.game.state.start('menu')
 	}
 }
 
-class PlayState {
+class PlayState extends Phaser.State {
 	preload() {
-		game.load.image('bat', 'images/bat.svg')
-		game.load.image('ghost', 'images/ghost.svg')
-		game.load.image('pumpkin', 'images/pumpkin.svg')
+		this.game.load.image('bat', 'images/bat.svg')
+		this.game.load.image('ghost', 'images/ghost.svg')
+		this.game.load.image('pumpkin', 'images/pumpkin.svg')
 	}
 
-	onDown(sprite, pointer) {
-	 // do something wonderful here
-	 alert('got here')
+	onDestroySprite(sprite, pointer) {
+		console.log(this.game)
+		this.game.score += 1
+		this.scoreLabel.text = "Score: " + this.game.score
+		sprite.destroy()
+	}
+
+	spriteFactory(sprite_name){
+		let scaleFactor = 0.2
+		let spriteWidth = this.game.cache.getImage(sprite_name).width * scaleFactor
+		let spriteHeight = this.game.cache.getImage(sprite_name).height * scaleFactor
+		let mx = this.game.width - spriteWidth
+    let my = this.game.height - spriteHeight
+		let randomX = this.game.rnd.integerInRange(0, mx)
+		let randomY = this.game.rnd.integerInRange(0, my)
+    let sprite = this.game.add.sprite(randomX, randomY, sprite_name)
+		sprite.anchor.setTo(0.5, 0.5)
+		this.game.physics.arcade.enable(sprite)
+		sprite.body.gravity.y = 10
+		sprite.scale.set(scaleFactor)
+    sprite.inputEnabled = true
+		sprite.checkWorldBounds = true;
+		sprite.outOfBoundsKill = true;
+		//sprite.input.pixelPerfectOver = true
+    //sprite.input.useHandCursor = true
+    sprite.events.onInputDown.add(this.onDestroySprite, this)
+		return sprite
 	}
 
 	create() {
-		let bat = game.add.sprite(game.world.centerX, game.world.centerY, 'bat')
-		bat.anchor.setTo(0.5, 0.5)
-		bat.scale.set(0.2)
-    bat.smoothed = false
-		bat.inputEnabled = true
-		bat.input.pixelPerfectOver = true
-    bat.input.useHandCursor = true
-		bat.events.onInputDown.add(this.onDown,this)
-		this.bat = bat
+		// score
+		this.scoreLabel = this.game.add.text(40, 20, 'Score: ' + this.game.score, { font: '25px Arial', fill: '#ffffff' })
+		//this.scoreLabel.anchor.set(0.5)
+
+		let sprites = ['bat', 'ghost', 'pumpkin']
+		sprites.forEach( sprite => {
+			for (var i = 0; i < 5; i++)
+	    {
+				this.spriteFactory(sprite)
+			}
+		})
+
+		this.timer = this.time.create(false)
+    this.timer.add(5000, this.timeUp, this)
+    this.timer.start()
+	}
+
+	timeUp() {
+		this.game.high_score = this.game.score
+		this.game.score = 0
+		this.game.state.start('menu')
 	}
 
 	update() {
-//		this.bat.angle += 5
-		// this.bat.scale += 1
+		// this.bat.angle += 0.5
 	}
 
 	// render() {
@@ -89,53 +124,70 @@ class PlayState {
 
 }
 
-class MenuState {
+class MenuState extends Phaser.State {
 	create() {
 		// Name of the game
-		var nameLabel = game.add.text(game.world.centerX, 80, 'Halloween Punkin Smash', { font: '50px Arial', fill: '#ffffff' })
-		nameLabel.anchor.setTo(0.5, 0.5)
+		let center = { x: this.game.world.centerX, y: this.game.world.centerY }
+		var nameLabel = this.game.add.text(center.x-40, 190, 'Halloween Pumpkin Smash', { font: '50px Arial', fill: '#ffffff' })
+		this.game.add.tween(nameLabel).to({y: 80}, 1000).easing(Phaser.Easing.Bounce.Out).start()
+		nameLabel.anchor.set(0.5)
+
+		// High Score
+		var highScoreLabel = this.game.add.text(center.x-40, 390, 'High Score: ' + this.game.high_score, { font: '25px Arial', fill: '#ffffff' })
+		this.game.add.tween(highScoreLabel).to({y: 180}, 200).easing(Phaser.Easing.Bounce.Out).start()
+		highScoreLabel.anchor.set(0.5)
 
 		// How to start the game
-		var startLabel = game.add.text(game.world.centerX, game.world.height-80, 'press the SPACEBAR to start', { font: '25px Arial', fill: '#ffffff' })
+		var startLabel = this.game.add.text(center.x-30, this.game.world.height-80, 'press SPACEBAR to start', { font: '25px Arial', fill: '#ffffff' })
 		startLabel.anchor.setTo(0.5, 0.5)
-		game.add.tween(startLabel).to({angle: -2}, 500).to({angle:2}, 500).loop().start()
+		this.game.add.tween(startLabel)
+								 .to({angle: -2}, 500)
+								 .to({angle: 2}, 500)
+								 .loop()
+								 .start()
 
 		// Add a mute button
-		this.muteButton = game.add.button(20, 20, 'mute', this.toggleSound, this)
+		this.muteButton = this.game.add.button(20, 20, 'mute', this.toggleSound, this)
 		this.muteButton.input.useHandCursor = true
-		if (game.sound.mute) {
+		if (this.game.sound.mute) {
 			this.muteButton.frame = 1
 		}
 
 		// Start the game when the up arrow key is pressed
-		var upKey = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR)
-		upKey.onDown.addOnce(this.start, this)
+		// this.input.onDown.addOnce(this.start, this)
+		var key = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR)
+		key.onDown.addOnce(this.start, this)
 	}
 
 	toggleSound() {
-		game.sound.mute = ! game.sound.mute
-		this.muteButton.frame = game.sound.mute ? 1 : 0
+		this.game.sound.mute = ! this.game.sound.mute
+		this.muteButton.frame = this.game.sound.mute ? 1 : 0
 	}
 
 	start() {
-		game.state.start('play')
+		this.game.state.start('play')
 	}
 }
 
-// Initialize Phaser
-var game = new Phaser.Game(730, 450, Phaser.AUTO, 'gameDiv')
+class Game extends Phaser.Game {
 
-// Our 'global' variable
-game.global = {
-	score: 0,
-	// Add other global variables
+	// Initialize Phaser
+	constructor(width, height, container) {
+		super(width, height, Phaser.AUTO, container, null)
+		this.state.add('boot', new BootState(), false)
+		this.state.add('load', new LoadState(), false)
+		this.state.add('menu', new MenuState(), false)
+		this.state.add('play', new PlayState(), false)
+
+		// Our 'global' variable
+		this.high_score = 0
+		this.score = 0
+
+		// Start the "boot" state
+		this.state.start('boot')
+	}
+
 }
 
-// Define states
-game.state.add( 'boot', new BootState() );
-game.state.add( 'load', new LoadState() );
-game.state.add( 'menu', new MenuState() );
-game.state.add( 'play', new PlayState() );
-
-// Start the "boot" state
-game.state.start('boot')
+// Lets go!
+new Game(730, 450, 'gameDiv')
